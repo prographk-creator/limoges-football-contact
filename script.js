@@ -108,6 +108,20 @@ document.addEventListener("DOMContentLoaded", function () {
       ]
     };
 
+    // Notification interne : met à jour le contact unique "direction@lfprojet.fr"
+    // (liste Notifications internes) avec les infos du visiteur, pour déclencher
+    // l'automatisation Mailjet qui envoie un email à direction@lfprojet.fr.
+    var notifPayload = {
+      Email: "direction@lfprojet.fr",
+      Fields: [
+        { ID: 891294, Value: liveForm.elements["nom"].value.trim() },
+        { ID: 891301, Value: sujetField ? sujetField.value : "" },
+        { ID: 891300, Value: messageValue },
+        { ID: 891323, Value: liveForm.elements["email"].value.trim() }
+      ]
+    };
+    var notifUrl = "https://155io.mjt.lu/wgt/155io/0y1p/subscribe?c=f7b6b0d8";
+
     var submitBtn = liveForm.querySelector(".apply_submit");
     if (submitBtn) submitBtn.disabled = true;
 
@@ -122,6 +136,14 @@ document.addEventListener("DOMContentLoaded", function () {
       body: JSON.stringify(payload)
     })
       .then(function () {
+        // Notification interne envoyée en best-effort : son échec éventuel ne
+        // doit pas empêcher d'afficher le succès au visiteur.
+        fetch(notifUrl, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify(notifPayload)
+        }).catch(function () {});
+
         liveForm.reset();
         liveForm.style.display = "none"; // style inline : prime sur la classe .apply_form
         if (successBox) successBox.classList.add("is-visible");
