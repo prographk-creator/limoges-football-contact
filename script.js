@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", function () {
     fetch(liveForm.action, { method: "POST", mode: "no-cors", body: data })
       .then(function () {
         liveForm.reset();
-        liveForm.hidden = true;
+        liveForm.style.display = "none"; // style inline : prime sur la classe .apply_form
         if (successBox) successBox.classList.add("is-visible");
       })
       .catch(function () {
