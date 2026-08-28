@@ -96,24 +96,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var sujetField = liveForm.elements["sujet"];
     var messageValue = liveForm.elements["message"].value.trim();
-    if (sujetField && sujetField.value) {
-      messageValue = "Sujet : " + sujetField.value + "\n\n" + messageValue;
-    }
 
-    // Champs envoyés à Brevo (les IDs des attributs configurés côté Brevo).
-    var data = new FormData();
-    data.append("EMAIL", liveForm.elements["email"].value.trim());
-    data.append("NOM", liveForm.elements["nom"].value.trim());
-    data.append("MESSAGE", messageValue);
-    data.append("email_address_check", ""); // anti-spam Brevo (doit rester vide)
-    data.append("locale", "fr");
+    // Champs envoyés à Mailjet (les ID numériques des propriétés de contact
+    // configurées côté Mailjet : nom, sujet, message).
+    var payload = {
+      Email: liveForm.elements["email"].value.trim(),
+      Fields: [
+        { ID: 891294, Value: liveForm.elements["nom"].value.trim() },
+        { ID: 891301, Value: sujetField ? sujetField.value : "" },
+        { ID: 891300, Value: messageValue }
+      ]
+    };
 
     var submitBtn = liveForm.querySelector(".apply_submit");
     if (submitBtn) submitBtn.disabled = true;
 
-    // mode "no-cors" : on ne peut pas lire la réponse de Brevo, mais la requête part bien.
-    fetch(liveForm.action, { method: "POST", mode: "no-cors", body: data })
-      .then(function () {
+    // Mailjet répond en CORS classique, on peut donc lire la réponse.
+    fetch(liveForm.action, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error("Réponse Mailjet non OK");
         liveForm.reset();
         liveForm.style.display = "none"; // style inline : prime sur la classe .apply_form
         if (successBox) successBox.classList.add("is-visible");
