@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Validation du formulaire de contact avant envoi vers Netlify Forms
+  // Validation du formulaire de contact avant envoi vers Brevo
   var form = document.querySelector("[data-contact-form]");
   if (!form) return;
 
@@ -79,18 +79,43 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   form.addEventListener("submit", function (e) {
+    e.preventDefault();
+
     var isFormValid = true;
     Object.keys(rules).forEach(function (name) {
       var field = form.elements[name];
       if (field && !validateField(field)) isFormValid = false;
     });
 
-    if (!isFormValid) {
-      e.preventDefault();
-      return;
+    if (!isFormValid) return;
+
+    var sujetField = form.elements["sujet"];
+    var messageValue = form.elements["message"].value.trim();
+    if (sujetField && sujetField.value) {
+      messageValue = "Sujet : " + sujetField.value + "\n\n" + messageValue;
     }
 
-    // Pas de preventDefault : Netlify Forms traite l'envoi nativement.
-    if (successBox) successBox.classList.add("is-visible");
+    // Champs envoyés à Brevo (les IDs des attributs configurés côté Brevo).
+    var data = new FormData();
+    data.append("EMAIL", form.elements["email"].value.trim());
+    data.append("NOM", form.elements["nom"].value.trim());
+    data.append("MESSAGE", messageValue);
+    data.append("email_address_check", ""); // anti-spam Brevo (doit rester vide)
+    data.append("locale", "fr");
+
+    var submitBtn = form.querySelector(".apply_submit");
+    if (submitBtn) submitBtn.disabled = true;
+
+    // mode "no-cors" : on ne peut pas lire la réponse de Brevo, mais la requête part bien.
+    fetch(form.action, { method: "POST", mode: "no-cors", body: data })
+      .then(function () {
+        form.reset();
+        form.hidden = true;
+        if (successBox) successBox.classList.add("is-visible");
+      })
+      .catch(function () {
+        if (submitBtn) submitBtn.disabled = false;
+        alert("Une erreur est survenue lors de l'envoi. Merci de réessayer ou de nous contacter par email.");
+      });
   });
 });
