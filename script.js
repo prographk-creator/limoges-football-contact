@@ -111,15 +111,17 @@ document.addEventListener("DOMContentLoaded", function () {
     var submitBtn = liveForm.querySelector(".apply_submit");
     if (submitBtn) submitBtn.disabled = true;
 
-    // Mailjet répond en CORS classique, on peut donc lire la réponse.
+    // L'endpoint Mailjet /subscribe n'autorise pas la lecture de la réponse
+    // en cross-origin (pas de CORS whitelisté pour un domaine tiers comme
+    // GitHub Pages) : on envoie donc en mode "no-cors" (réponse opaque,
+    // illisible mais bien reçue et traitée côté Mailjet), sans le header
+    // Content-Type (sinon le navigateur bloquerait la requête en preflight).
     fetch(liveForm.action, {
       method: "POST",
-      mode: "cors",
-      headers: { "Content-Type": "application/json" },
+      mode: "no-cors",
       body: JSON.stringify(payload)
     })
-      .then(function (response) {
-        if (!response.ok) throw new Error("Réponse Mailjet non OK");
+      .then(function () {
         liveForm.reset();
         liveForm.style.display = "none"; // style inline : prime sur la classe .apply_form
         if (successBox) successBox.classList.add("is-visible");
