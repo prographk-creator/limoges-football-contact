@@ -64,7 +64,8 @@ document.addEventListener("DOMContentLoaded", function () {
       errorText = "Merci d'indiquer une adresse email valide.";
     }
 
-    var errorSpan = form.querySelector('[data-contact-' + field.name + '-error]');
+    var fieldWrapper = field.closest(".apply_field") || (field.form || document);
+    var errorSpan = fieldWrapper.querySelector('[data-contact-' + field.name + '-error]');
     if (errorSpan) {
       errorSpan.textContent = errorText;
       errorSpan.classList.toggle("is-visible", errorText !== "");
@@ -78,39 +79,43 @@ document.addEventListener("DOMContentLoaded", function () {
     if (field) field.addEventListener("blur", function () { validateField(field); });
   });
 
-  form.addEventListener("submit", function (e) {
+  // Délégation sur document (plus robuste qu'un addEventListener direct sur
+  // le formulaire si une extension du navigateur clone/modifie le DOM).
+  document.addEventListener("submit", function (e) {
+    var liveForm = e.target;
+    if (!liveForm || !liveForm.matches || !liveForm.matches("[data-contact-form]")) return;
     e.preventDefault();
 
     var isFormValid = true;
     Object.keys(rules).forEach(function (name) {
-      var field = form.elements[name];
+      var field = liveForm.elements[name];
       if (field && !validateField(field)) isFormValid = false;
     });
 
     if (!isFormValid) return;
 
-    var sujetField = form.elements["sujet"];
-    var messageValue = form.elements["message"].value.trim();
+    var sujetField = liveForm.elements["sujet"];
+    var messageValue = liveForm.elements["message"].value.trim();
     if (sujetField && sujetField.value) {
       messageValue = "Sujet : " + sujetField.value + "\n\n" + messageValue;
     }
 
     // Champs envoyés à Brevo (les IDs des attributs configurés côté Brevo).
     var data = new FormData();
-    data.append("EMAIL", form.elements["email"].value.trim());
-    data.append("NOM", form.elements["nom"].value.trim());
+    data.append("EMAIL", liveForm.elements["email"].value.trim());
+    data.append("NOM", liveForm.elements["nom"].value.trim());
     data.append("MESSAGE", messageValue);
     data.append("email_address_check", ""); // anti-spam Brevo (doit rester vide)
     data.append("locale", "fr");
 
-    var submitBtn = form.querySelector(".apply_submit");
+    var submitBtn = liveForm.querySelector(".apply_submit");
     if (submitBtn) submitBtn.disabled = true;
 
     // mode "no-cors" : on ne peut pas lire la réponse de Brevo, mais la requête part bien.
-    fetch(form.action, { method: "POST", mode: "no-cors", body: data })
+    fetch(liveForm.action, { method: "POST", mode: "no-cors", body: data })
       .then(function () {
-        form.reset();
-        form.hidden = true;
+        liveForm.reset();
+        liveForm.hidden = true;
         if (successBox) successBox.classList.add("is-visible");
       })
       .catch(function () {
