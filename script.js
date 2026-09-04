@@ -100,53 +100,32 @@ document.addEventListener("DOMContentLoaded", function () {
  
     var sujetField = liveForm.elements["sujet"];
     var messageValue = liveForm.elements["message"].value.trim();
+    var consentField = liveForm.elements["consent"];
  
-    // Champs envoyés à Mailjet (les ID numériques des propriétés de contact
-    // configurées côté Mailjet : nom, sujet, message).
+    // Envoi vers le Worker qui relaie ensuite vers MailerLite (groupe "Contact -
+    // Messages"), avec déclenchement automatique de l'email de confirmation.
     var payload = {
-      Email: liveForm.elements["email"].value.trim(),
-      Fields: [
-        { ID: 891294, Value: liveForm.elements["nom"].value.trim() },
-        { ID: 891301, Value: sujetField ? sujetField.value : "" },
-        { ID: 891300, Value: messageValue }
-      ]
+      form: "contact",
+      data: {
+        nom: liveForm.elements["nom"].value.trim(),
+        email: liveForm.elements["email"].value.trim(),
+        sujet: sujetField ? sujetField.value : "",
+        message: messageValue,
+        consent: consentField ? consentField.checked : false
+      }
     };
- 
-    // Notification interne : met à jour le contact unique "direction@lfprojet.fr"
-    // (liste Notifications internes) avec les infos du visiteur, pour déclencher
-    // l'automatisation Mailjet qui envoie un email à direction@lfprojet.fr.
-    var notifPayload = {
-      Email: "direction@lfprojet.fr",
-      Fields: [
-        { ID: 891294, Value: liveForm.elements["nom"].value.trim() },
-        { ID: 891301, Value: sujetField ? sujetField.value : "" },
-        { ID: 891300, Value: messageValue },
-        { ID: 891323, Value: liveForm.elements["email"].value.trim() }
-      ]
-    };
-    var notifUrl = "https://155io.mjt.lu/wgt/155io/0y1p/subscribe?c=f7b6b0d8";
  
     var submitBtn = liveForm.querySelector(".apply_submit");
     if (submitBtn) submitBtn.disabled = true;
  
-    // L'endpoint Mailjet /subscribe n'autorise pas la lecture de la réponse
-    // en cross-origin (pas de CORS whitelisté pour un domaine tiers comme
-    // GitHub Pages) : on envoie donc en mode "no-cors" (réponse opaque,
-    // illisible mais bien reçue et traitée côté Mailjet), sans le header
-    // Content-Type (sinon le navigateur bloquerait la requête en preflight).
-    fetch(liveForm.action, {
+    fetch("https://lfprojet-forms.pro-graphk.workers.dev/submit", {
       method: "POST",
-      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     })
-      .then(function () {
-        // Notification interne envoyée en best-effort : son échec éventuel ne
-        // doit pas empêcher d'afficher le succès au visiteur.
-        fetch(notifUrl, {
-          method: "POST",
-          mode: "no-cors",
-          body: JSON.stringify(notifPayload)
-        }).catch(function () {});
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (!json || json.ok === false) throw new Error((json && json.error) || "unknown_error");
  
         liveForm.reset();
         liveForm.style.display = "none"; // style inline : prime sur la classe .apply_form
