@@ -679,7 +679,7 @@ img {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  background-color: #f4f6f8;
+  background-color: #F6F7F9;
   border-radius: 0.5rem;
   padding: 1.125rem 1.25rem;
 }
@@ -810,3 +810,4 @@ img {
 @media (max-width: 479px) {
   .footer_top { grid-template-columns: minmax(0, 1fr); gap: 2.25rem; text-align: center; justify-items: center; }
 }
+ 
